@@ -1,3 +1,4 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -5,13 +6,12 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.jetbrains.compose)
-    id("com.vanniktech.maven.publish")
 }
 
 kotlin {
     androidLibrary {
         compileSdk = 36
-        namespace = "com.kyant.backdrop"
+        namespace = "com.kyant.backdrop.catalog"
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
         }
@@ -36,8 +36,9 @@ kotlin {
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.ui.graphics)
+                implementation(libs.compose.material.ripple)
                 implementation(libs.kyant.shapes)
-                implementation("org.jetbrains:annotations:26.0.2-1")
+                implementation(project(":backdrop"))
             }
         }
 
@@ -47,6 +48,9 @@ kotlin {
 
         val desktopMain by getting {
             dependsOn(skikoMain)
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
         }
 
         val macosArm64Main by getting {
@@ -79,35 +83,14 @@ kotlin {
     }
 }
 
-mavenPublishing {
-    publishToMavenCentral()
-    signAllPublications()
+compose.desktop {
+    application {
+        mainClass = "com.kyant.backdrop.catalog.MainKt"
 
-    coordinates("io.github.kyant0", "backdrop", "2.0.0-alpha01")
-
-    pom {
-        name.set("Backdrop")
-        description.set("Compose Multiplatform Liquid Glass effects")
-        inceptionYear.set("2025")
-        url.set("https://github.com/Kyant0/AndroidLiquidGlass")
-        licenses {
-            license {
-                name.set("The Apache License, Version 2.0")
-                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                distribution.set("repo")
-            }
-        }
-        developers {
-            developer {
-                id.set("Kyant0")
-                name.set("Kyant")
-                url.set("https://github.com/Kyant0")
-            }
-        }
-        scm {
-            url.set("https://github.com/Kyant0/AndroidLiquidGlass")
-            connection.set("scm:git:git://github.com/Kyant0/AndroidLiquidGlass.git")
-            developerConnection.set("scm:git:ssh://git@github.com/Kyant0/AndroidLiquidGlass.git")
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "com.kyant.backdrop.catalog"
+            packageVersion = "1.0.0"
         }
     }
 }
