@@ -22,6 +22,6 @@ Below are some example components:
 
 ## Demo
 
-- [Backdrop Catalog](./androidApp/release/catalog-release.apk)
+- [Backdrop Catalog](./androidApp/release/androidApp-release.apk)
 
 ![Screenshots of Backdrop Catalog](artworks/catalog_app.jpg)
