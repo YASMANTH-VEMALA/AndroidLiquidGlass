@@ -10,6 +10,7 @@ plugins {
 
 kotlin {
     androidLibrary {
+        minSdk = 21
         compileSdk = 36
         namespace = "com.kyant.backdrop"
         compilerOptions {
@@ -83,7 +84,7 @@ mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
 
-    coordinates("io.github.kyant0", "backdrop", "2.0.0-alpha01")
+    coordinates("io.github.kyant0", "backdrop", "2.0.0-alpha02")
 
     pom {
         name.set("Backdrop")

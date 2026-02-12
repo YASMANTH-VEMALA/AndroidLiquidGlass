@@ -10,6 +10,7 @@ plugins {
 
 kotlin {
     androidLibrary {
+        minSdk = 21
         compileSdk = 36
         namespace = "com.kyant.backdrop.catalog"
         compilerOptions {
