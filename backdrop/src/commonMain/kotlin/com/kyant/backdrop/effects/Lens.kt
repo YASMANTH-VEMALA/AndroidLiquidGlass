@@ -1,6 +1,7 @@
 package com.kyant.backdrop.effects
 
 import androidx.annotation.FloatRange
+import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastCoerceAtLeast
@@ -61,7 +62,28 @@ fun BackdropEffectScope.lens(
 private val BackdropEffectScope.cornerRadii: FloatArray?
     get() = when (val shape = shape) {
         is RoundedRectangularShape -> {
-            shape.cornerRadii(size, layoutDirection, this)
+            val corners = shape.corners(size, layoutDirection, this)
+            floatArrayOf(
+                corners.topLeft,
+                corners.topRight,
+                corners.bottomRight,
+                corners.bottomLeft
+            )
+        }
+
+        is AbsoluteRoundedCornerShape -> {
+            val size = size
+            val maxRadius = size.minDimension / 2f
+            val topLeft = shape.topStart.toPx(size, this)
+            val topRight = shape.topEnd.toPx(size, this)
+            val bottomRight = shape.bottomEnd.toPx(size, this)
+            val bottomLeft = shape.bottomStart.toPx(size, this)
+            floatArrayOf(
+                topLeft.fastCoerceAtMost(maxRadius),
+                topRight.fastCoerceAtMost(maxRadius),
+                bottomRight.fastCoerceAtMost(maxRadius),
+                bottomLeft.fastCoerceAtMost(maxRadius)
+            )
         }
 
         is CornerBasedShape -> {

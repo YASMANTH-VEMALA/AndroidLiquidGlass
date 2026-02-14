@@ -111,7 +111,7 @@ fun LiquidSlider(
         Box(Modifier.layerBackdrop(trackBackdrop)) {
             Box(
                 Modifier
-                    .clip(Capsule)
+                    .clip(Capsule())
                     .background(trackColor)
                     .pointerInput(animationScope) {
                         detectTapGestures { position ->
@@ -130,7 +130,7 @@ fun LiquidSlider(
 
             Box(
                 Modifier
-                    .clip(Capsule)
+                    .clip(Capsule())
                     .background(accentColor)
                     .height(6f.dp)
                     .layout { measurable, constraints ->
@@ -163,7 +163,7 @@ fun LiquidSlider(
                             }
                         }
                     ),
-                    shape = { Capsule },
+                    shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
                         blur(8f.dp.toPx() * (1f - progress))

@@ -1,11 +1,11 @@
 [versions]
 agp = "9.0.0"
-kotlin = "2.3.0"
+kotlin = "2.3.10"
 
-activity = "1.12.2"
+activity = "1.12.4"
 core = "1.17.0"
-compose = "1.10.0"
-kyantShapes = "1.1.0"
+compose = "1.10.1"
+kyantShapes = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core" }

@@ -69,7 +69,7 @@ fun MagnifierContent() {
                 }
                 .draggable2D(rememberDraggable2DState { delta -> offset += delta })
                 .layerBackdrop(cursorBackdrop)
-                .background(accentColor, Capsule)
+                .background(accentColor, Capsule())
                 .size(4f.dp, 24f.dp)
         )
 
@@ -82,7 +82,7 @@ fun MagnifierContent() {
                 }
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(backdrop, contentBackdrop, cursorBackdrop),
-                    shape = { Capsule },
+                    shape = { Capsule() },
                     effects = {
                         lens(
                             8f.dp.toPx(),

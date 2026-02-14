@@ -28,7 +28,7 @@ fun RowScope.LiquidBottomTab(
     val scale = LocalLiquidBottomTabScale.current
     Column(
         modifier
-            .clip(Capsule)
+            .clip(Capsule())
             .clickable(
                 interactionSource = null,
                 indication = null,

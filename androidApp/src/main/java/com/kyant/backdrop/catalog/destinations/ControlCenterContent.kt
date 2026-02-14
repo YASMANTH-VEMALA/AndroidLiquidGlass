@@ -70,7 +70,7 @@ fun ControlCenterContent() {
     val itemShape = RoundedRectangle(itemSize / 2f)
 
     val innerItemSize = 56f.dp
-    val innerItemShape = Capsule
+    val innerItemShape = Capsule()
     val innerItemIconScale = 0.8f
 
     val inactiveItemColor = Color.White.copy(0.2f)

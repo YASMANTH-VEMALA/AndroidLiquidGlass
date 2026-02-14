@@ -54,7 +54,7 @@ fun LiquidButton(
         modifier
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { Capsule },
+                shape = { Capsule() },
                 effects = {
                     vibrancy()
                     blur(2f.dp.toPx())

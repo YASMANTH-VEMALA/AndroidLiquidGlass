@@ -121,7 +121,7 @@ fun LiquidToggle(
         Box(
             Modifier
                 .layerBackdrop(trackBackdrop)
-                .clip(Capsule)
+                .clip(Capsule())
                 .drawBehind {
                     val fraction = dampedDragAnimation.value
                     drawRect(lerp(trackColor, accentColor, fraction))
@@ -154,7 +154,7 @@ fun LiquidToggle(
                             }
                         }
                     ),
-                    shape = { Capsule },
+                    shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
                         blur(8f.dp.toPx() * (1f - progress))

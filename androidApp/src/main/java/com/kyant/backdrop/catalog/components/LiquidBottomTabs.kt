@@ -165,7 +165,7 @@ fun LiquidBottomTabs(
                 }
                 .drawBackdrop(
                     backdrop = backdrop,
-                    shape = { Capsule },
+                    shape = { Capsule() },
                     effects = {
                         vibrancy()
                         blur(8f.dp.toPx())
@@ -202,7 +202,7 @@ fun LiquidBottomTabs(
                     }
                     .drawBackdrop(
                         backdrop = backdrop,
-                        shape = { Capsule },
+                        shape = { Capsule() },
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
@@ -240,7 +240,7 @@ fun LiquidBottomTabs(
                 .then(dampedDragAnimation.modifier)
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
-                    shape = { Capsule },
+                    shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
                         lens(

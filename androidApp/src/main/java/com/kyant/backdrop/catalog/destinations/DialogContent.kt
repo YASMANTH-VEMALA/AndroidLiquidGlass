@@ -105,7 +105,7 @@ fun DialogContent() {
             ) {
                 Row(
                     Modifier
-                        .clip(Capsule)
+                        .clip(Capsule())
                         .background(containerColor.copy(0.2f))
                         .clickable {}
                         .height(48f.dp)
@@ -121,7 +121,7 @@ fun DialogContent() {
                 }
                 Row(
                     Modifier
-                        .clip(Capsule)
+                        .clip(Capsule())
                         .background(accentColor)
                         .clickable {}
                         .height(48f.dp)
