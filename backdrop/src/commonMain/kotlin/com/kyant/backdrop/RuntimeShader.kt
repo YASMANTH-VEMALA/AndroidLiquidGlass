@@ -1,9 +1,12 @@
 package com.kyant.backdrop
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shader
 import org.intellij.lang.annotations.Language
 
 expect fun RuntimeShader(@Language("AGSL") shaderString: String): RuntimeShader
+
+expect fun RuntimeShader.asComposeShader(): Shader
 
 interface RuntimeShader {
 

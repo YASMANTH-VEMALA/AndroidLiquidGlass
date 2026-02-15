@@ -10,7 +10,7 @@ import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.internal.RoundedRectRefractionShaderString
 import com.kyant.backdrop.internal.RoundedRectRefractionWithDispersionShaderString
 import com.kyant.backdrop.internal.RuntimeShaderEffect
-import com.kyant.backdrop.internal.isRuntimeShaderSupported
+import com.kyant.backdrop.isRuntimeShaderSupported
 import com.kyant.shapes.RoundedRectangularShape
 
 fun BackdropEffectScope.lens(

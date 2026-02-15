@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
 import com.kyant.backdrop.internal.ShapeProvider
 import com.kyant.backdrop.internal.clipOutline
-import com.kyant.backdrop.internal.isRenderEffectSupported
+import com.kyant.backdrop.isRenderEffectSupported
 
 internal class InnerShadowElement(
     val shapeProvider: ShapeProvider,

@@ -10,7 +10,7 @@ fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
         state = rememberWindowState(position = WindowPosition.Aligned(Alignment.Center)),
-        title = "Backdrop Catalog",
+        title = "Backdrop Catalog"
     ) {
         MainContent()
     }

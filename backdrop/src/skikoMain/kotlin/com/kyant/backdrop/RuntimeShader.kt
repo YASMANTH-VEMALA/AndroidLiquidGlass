@@ -1,6 +1,7 @@
 package com.kyant.backdrop
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import org.intellij.lang.annotations.Language
 import org.jetbrains.skia.RuntimeEffect
@@ -9,6 +10,10 @@ import org.jetbrains.skia.RuntimeShaderBuilder
 actual fun RuntimeShader(@Language("AGSL") shaderString: String): RuntimeShader {
     val shader = RuntimeShaderBuilder(RuntimeEffect.makeForShader(shaderString))
     return SkikoRuntimeShader(shader)
+}
+
+actual fun RuntimeShader.asComposeShader(): Shader {
+    return this.asSkikoRuntimeShader().makeShader()
 }
 
 fun RuntimeShader.asSkikoRuntimeShader(): RuntimeShaderBuilder {
@@ -59,6 +64,7 @@ internal class SkikoRuntimeShader(val shader: RuntimeShaderBuilder) : RuntimeSha
 
     override fun setColorUniform(name: String, color: Color) {
         val srgb = color.convert(ColorSpaces.Srgb)
-        shader.uniform(name, srgb.red, srgb.green, srgb.blue, srgb.alpha)
+        val a = srgb.alpha
+        shader.uniform(name, srgb.red * a, srgb.green * a, srgb.blue * a, a)
     }
 }

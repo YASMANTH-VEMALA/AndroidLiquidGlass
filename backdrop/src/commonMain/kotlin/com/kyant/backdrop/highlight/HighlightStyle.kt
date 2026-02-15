@@ -14,7 +14,7 @@ import com.kyant.backdrop.RuntimeShader
 import com.kyant.backdrop.RuntimeShaderCache
 import com.kyant.backdrop.internal.AmbientHighlightShaderString
 import com.kyant.backdrop.internal.DefaultHighlightShaderString
-import com.kyant.backdrop.internal.isRuntimeShaderSupported
+import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlin.math.PI
 
 @Immutable

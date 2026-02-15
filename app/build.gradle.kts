@@ -12,7 +12,8 @@ kotlin {
     androidLibrary {
         minSdk = 21
         compileSdk = 36
-        namespace = "com.kyant.backdrop.catalog"
+        namespace = "com.kyant.backdrop.catalog.common"
+        androidResources.enable = true
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
         }
@@ -37,9 +38,17 @@ kotlin {
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.ui.graphics)
+                implementation(libs.compose.resources)
                 implementation(libs.compose.material.ripple)
                 implementation(libs.kyant.shapes)
                 implementation(project(":backdrop"))
+            }
+        }
+
+        val androidMain by getting {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.androidx.activity.compose)
             }
         }
 
@@ -81,6 +90,12 @@ kotlin {
         all {
             languageSettings.enableLanguageFeature("ContextParameters")
         }
+    }
+
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-Xlambdas=class"
+        )
     }
 }
 

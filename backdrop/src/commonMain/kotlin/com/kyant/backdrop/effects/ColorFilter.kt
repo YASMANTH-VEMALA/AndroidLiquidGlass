@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ColorMatrixColorFilter
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.internal.ColorFilterEffect
-import com.kyant.backdrop.internal.isRenderEffectSupported
+import com.kyant.backdrop.isRenderEffectSupported
 
 fun BackdropEffectScope.colorFilter(colorFilter: ColorFilter) {
     if (!isRenderEffectSupported()) return

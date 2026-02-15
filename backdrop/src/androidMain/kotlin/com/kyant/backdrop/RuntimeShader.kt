@@ -3,6 +3,7 @@ package com.kyant.backdrop
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.toArgb
 import org.intellij.lang.annotations.Language
 
@@ -10,6 +11,10 @@ import org.intellij.lang.annotations.Language
 actual fun RuntimeShader(@Language("AGSL") shaderString: String): RuntimeShader {
     val shader = android.graphics.RuntimeShader(shaderString)
     return AndroidRuntimeShader(shader)
+}
+
+actual fun RuntimeShader.asComposeShader(): Shader {
+    return this.asAndroidRuntimeShader()
 }
 
 fun RuntimeShader.asAndroidRuntimeShader(): android.graphics.RuntimeShader {

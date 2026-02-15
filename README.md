@@ -15,10 +15,10 @@ A customizable Liquid Glass effect library for Compose Multiplatform.
 The library does not include any high-level components; you will need to create your own.
 Below are some example components:
 
-- [LiquidButton](/androidApp/src/main/java/com/kyant/backdrop/catalog/components/LiquidButton.kt)
-- [LiquidToggle](/androidApp/src/main/java/com/kyant/backdrop/catalog/components/LiquidToggle.kt)
-- [LiquidSlider](/androidApp/src/main/java/com/kyant/backdrop/catalog/components/LiquidSlider.kt)
-- [LiquidBottomTabs](/androidApp/src/main/java/com/kyant/backdrop/catalog/components/LiquidBottomTabs.kt)
+- [LiquidButton](/app/src/commonMain/kotlin/com/kyant/backdrop/catalog/components/LiquidButton.kt)
+- [LiquidToggle](/app/src/commonMain/kotlin/com/kyant/backdrop/catalog/components/LiquidToggle.kt)
+- [LiquidSlider](/app/src/commonMain/kotlin/com/kyant/backdrop/catalog/components/LiquidSlider.kt)
+- [LiquidBottomTabs](/app/src/commonMain/kotlin/com/kyant/backdrop/catalog/components/LiquidBottomTabs.kt)
 
 ## Demo
 
