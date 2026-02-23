@@ -28,9 +28,16 @@ kotlin {
         browser()
     }
 
-    macosArm64()
-    iosArm64("iosArm64")
-    iosSimulatorArm64("iosSimulatorArm64")
+    listOf(
+        macosArm64(),
+        iosArm64("iosArm64"),
+        iosSimulatorArm64("iosSimulatorArm64")
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "shared"
+            isStatic = true
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
