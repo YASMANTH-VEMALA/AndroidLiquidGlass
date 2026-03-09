@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.kyant.backdrop.catalog.network.ApiClient
 import com.kyant.backdrop.catalog.network.ChatSocketManager
 import com.kyant.backdrop.catalog.network.models.Conversation
+import com.kyant.backdrop.catalog.notifications.MessageNotificationManager
 import com.kyant.backdrop.catalog.network.models.Message
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -254,6 +255,10 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     fun selectConversation(conversation: Conversation?) {
         _uiState.value.selectedConversation?.let { ChatSocketManager.leaveChat(it.id) }
+
+        ChatSocketManager.activeConversationId = conversation?.id
+        conversation?.let { MessageNotificationManager.clearConversationNotification(context, it.id) }
+
         _uiState.update {
             it.copy(
                 selectedConversation = conversation,

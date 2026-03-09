@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import com.kyant.backdrop.catalog.network.ChatSocketManager
+import com.kyant.backdrop.catalog.notifications.MessageNotificationManager
 import com.kyant.backdrop.catalog.notifications.VormexMessagingService
 import com.kyant.backdrop.catalog.onboarding.AppRoot
 
@@ -75,6 +77,9 @@ class MainActivity : ComponentActivity() {
         
         // Request notification permission (Android 13+)
         requestNotificationPermission()
+        
+        // Set up local notification callback for real-time messages
+        setupLocalNotifications()
         
         // Handle initial intent (e.g., app launched from notification)
         handleIntent(intent)
@@ -151,5 +156,21 @@ class MainActivity : ComponentActivity() {
         //     Log.d(TAG, "FCM Token: $token")
         // }
         Log.d(TAG, "Firebase Messaging initialization skipped (google-services.json not configured)")
+    }
+    
+    private fun setupLocalNotifications() {
+        VormexMessagingService.createNotificationChannels(this)
+
+        ChatSocketManager.setNotificationCallback { senderName, messageContent, data ->
+            Log.d(TAG, "🔔 Local notification: $senderName - $messageContent")
+            MessageNotificationManager.showMessageNotification(
+                context = this,
+                senderName = senderName,
+                messageContent = messageContent,
+                senderImageUrl = data["senderImage"],
+                conversationId = data["conversationId"] ?: "",
+                senderId = data["user_id"] ?: ""
+            )
+        }
     }
 }

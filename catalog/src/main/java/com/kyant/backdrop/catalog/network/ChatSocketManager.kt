@@ -39,6 +39,12 @@ object ChatSocketManager {
     
     // Track joined rooms to re-join on reconnect
     private val joinedRooms = mutableSetOf<String>()
+    
+    // Notification callback for showing local notifications
+    private var notificationCallback: ((title: String, body: String, data: Map<String, String>) -> Unit)? = null
+    
+    // Track current active conversation to avoid notifying for messages the user is viewing
+    var activeConversationId: String? = null
 
     // Use MutableSharedFlow with replay to ensure events aren't lost
     // Replay=1 ensures late collectors get the last event
@@ -52,6 +58,13 @@ object ChatSocketManager {
 
     private val _messagesReadFlow = MutableSharedFlow<Pair<String, String>>(replay = 0, extraBufferCapacity = 5)
     val messagesReadFlow = _messagesReadFlow.asSharedFlow()
+    
+    /**
+     * Set callback for showing local notifications
+     */
+    fun setNotificationCallback(callback: (title: String, body: String, data: Map<String, String>) -> Unit) {
+        notificationCallback = callback
+    }
 
     private val _messageDeletedFlow = MutableSharedFlow<Triple<String, String, Boolean>>(replay = 0, extraBufferCapacity = 5)
     val messageDeletedFlow = _messageDeletedFlow.asSharedFlow()
@@ -205,6 +218,8 @@ object ChatSocketManager {
                 if (message != null && conversationId.isNotEmpty()) {
                     Log.d(TAG, "📩 Parsed from string: conv=$conversationId")
                     _newMessageFlow.tryEmit(conversationId to message.toString())
+                    // Show notification if not viewing this conversation
+                    showMessageNotificationIfNeeded(conversationId, message)
                 }
                 return
             }
@@ -218,10 +233,48 @@ object ChatSocketManager {
             if (conversationId.isNotEmpty()) {
                 val emitted = _newMessageFlow.tryEmit(conversationId to message.toString())
                 Log.d(TAG, "📩 Flow emit result: $emitted")
+                // Show notification if not viewing this conversation
+                showMessageNotificationIfNeeded(conversationId, message)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling new message", e)
         }
+    }
+    
+    private fun showMessageNotificationIfNeeded(conversationId: String, message: JSONObject) {
+        if (activeConversationId == conversationId) {
+            Log.d(TAG, "🔕 Skipping notification - user is viewing conversation $conversationId")
+            return
+        }
+
+        val sender = message.optJSONObject("sender")
+        val senderName = sender?.optString("name")?.takeIf { it.isNotBlank() }
+            ?: sender?.optString("username")?.takeIf { it.isNotBlank() }
+            ?: "Someone"
+        val senderId = sender?.optString("id") ?: ""
+        val senderImage = sender?.optString("profileImage")?.takeIf { it.isNotBlank() } ?: ""
+
+        val contentType = message.optString("contentType", "text")
+        val displayContent = when (contentType) {
+            "image" -> "\uD83D\uDCF7 Sent a photo"
+            "video" -> "\uD83C\uDFA5 Sent a video"
+            "file" -> "\uD83D\uDCCE Sent a file"
+            "audio" -> "\uD83C\uDFB5 Sent a voice message"
+            else -> message.optString("content", "Sent you a message")
+        }
+
+        Log.d(TAG, "🔔 Showing notification for message from $senderName (image: ${senderImage.take(30)})")
+
+        notificationCallback?.invoke(
+            senderName,
+            displayContent,
+            mapOf(
+                "type" to "message",
+                "conversationId" to conversationId,
+                "user_id" to senderId,
+                "senderImage" to senderImage
+            )
+        )
     }
     
     private fun handleNotification(args: Array<Any>) {
@@ -233,19 +286,8 @@ object ChatSocketManager {
         try {
             val rawArg = args[0]
             Log.d(TAG, "🔔 Raw arg type: ${rawArg::class.java.simpleName}")
-            val obj = rawArg as? JSONObject
-            if (obj == null) {
-                Log.w(TAG, "🔔 Could not cast to JSONObject, trying toString...")
-                val parsed = JSONObject(rawArg.toString())
-                if (parsed.optString("type") == "new_message") {
-                    val conversationId = parsed.optString("conversationId")
-                    val message = parsed.optJSONObject("message")
-                    if (message != null && conversationId.isNotEmpty()) {
-                        _newMessageFlow.tryEmit(conversationId to message.toString())
-                    }
-                }
-                return
-            }
+            val obj = rawArg as? JSONObject ?: JSONObject(rawArg.toString())
+
             Log.d(TAG, "🔔 Notification type: ${obj.optString("type")}")
             if (obj.optString("type") == "new_message") {
                 val conversationId = obj.optString("conversationId")
@@ -258,6 +300,12 @@ object ChatSocketManager {
                 if (conversationId.isNotEmpty()) {
                     val emitted = _newMessageFlow.tryEmit(conversationId to message.toString())
                     Log.d(TAG, "🔔 Flow emit result: $emitted")
+
+                    // Merge top-level sender info into message if message.sender is missing
+                    if (!message.has("sender") || message.isNull("sender")) {
+                        obj.optJSONObject("sender")?.let { message.put("sender", it) }
+                    }
+                    showMessageNotificationIfNeeded(conversationId, message)
                 }
             }
         } catch (e: Exception) {
