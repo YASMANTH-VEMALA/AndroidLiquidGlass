@@ -333,7 +333,9 @@ class FeedViewModel(private val context: Context) : ViewModel() {
                         isLoggedIn = true,
                         currentUser = response.user,
                         currentUserId = response.user.id,
-                        isLoading = false
+                        isLoading = false,
+                        showOnboarding = !response.user.onboardingCompleted,
+                        onboardingCompleted = response.user.onboardingCompleted
                     )
                     loadFeed()
                     loadStories()
@@ -358,7 +360,9 @@ class FeedViewModel(private val context: Context) : ViewModel() {
                         isLoggedIn = true,
                         currentUser = response.user,
                         currentUserId = response.user.id,
-                        isLoading = false
+                        isLoading = false,
+                        showOnboarding = true, // New users always need onboarding
+                        onboardingCompleted = false
                     )
                     loadFeed()
                     loadStories()
@@ -385,7 +389,10 @@ class FeedViewModel(private val context: Context) : ViewModel() {
                             _uiState.value = _uiState.value.copy(
                                 isLoggedIn = true,
                                 currentUser = response.user,
-                                isGoogleLoading = false
+                                currentUserId = response.user.id,
+                                isGoogleLoading = false,
+                                showOnboarding = !response.user.onboardingCompleted,
+                                onboardingCompleted = response.user.onboardingCompleted
                             )
                             loadFeed()
                             loadStories()

@@ -40,19 +40,14 @@ fun AppRoot(
         }
     }
     
-    // Load preference from DataStore for initial route
-    val hasSeenOnboarding by OnboardingPreferences.hasSeenOnboarding(context)
-        .collectAsState(initial = false)
-    
-    // Determine start destination based on onboarding state
-    val startDestination = if (hasSeenOnboarding) Route.Home.path else Route.Onboarding.path
-    
+    // Always start at Home - authentication is handled inside LinkedInContent
+    // After login, onboarding is shown if user hasn't completed it
     NavHost(
         navController = navController,
-        startDestination = startDestination,
+        startDestination = Route.Home.path,
         modifier = Modifier.fillMaxSize()
     ) {
-        // Onboarding screen (welcome slides)
+        // Onboarding screen (welcome slides) - kept for potential future use
         composable(Route.Onboarding.path) {
             OnboardingScreen(
                 onComplete = {
@@ -79,7 +74,7 @@ fun AppRoot(
             )
         }
         
-        // Home screen
+        // Home screen - shows login first, then onboarding after auth
         composable(Route.Home.path) {
             HomeScreen(
                 deepLink = pendingDeepLink,
