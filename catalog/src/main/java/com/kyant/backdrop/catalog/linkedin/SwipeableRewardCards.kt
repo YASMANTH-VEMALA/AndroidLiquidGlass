@@ -1,0 +1,840 @@
+package com.kyant.backdrop.catalog.linkedin
+
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.catalog.network.models.DailyMatchUser
+import com.kyant.backdrop.catalog.network.models.HiddenGemUser
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.shapes.RoundedRectangle
+import kotlinx.coroutines.delay
+import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
+
+// ==================== Trending Banner (Auto-dismiss after 2 seconds) ====================
+
+@Composable
+fun TrendingBannerAutoHide(
+    isTrending: Boolean,
+    rank: Int?,
+    viewsToday: Int,
+    message: String?,
+    backdrop: LayerBackdrop,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    var visible by remember { mutableStateOf(false) }
+    
+    // Show for 2 seconds then auto-hide
+    LaunchedEffect(isTrending) {
+        if (isTrending) {
+            visible = true
+            delay(2000) // Show for 2 seconds
+            visible = false
+        }
+    }
+    
+    // Bounce animation
+    val infiniteTransition = rememberInfiniteTransition(label = "bounce")
+    val bounce by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bounce"
+    )
+    
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn() + scaleIn(initialScale = 0.8f),
+        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut() + scaleOut(targetScale = 0.8f),
+        modifier = modifier
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { RoundedRectangle(16f.dp) },
+                    effects = {
+                        vibrancy()
+                        blur(24f.dp.toPx())
+                    }
+                )
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFFFF6B6B).copy(alpha = 0.25f),
+                            Color(0xFFFFE66D).copy(alpha = 0.2f),
+                            Color(0xFF4ECDC4).copy(alpha = 0.15f)
+                        )
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Animated fire icon
+                Box(Modifier.offset(y = (-bounce).dp)) {
+                    BasicText(
+                        text = "🔥",
+                        style = TextStyle(fontSize = 28.sp)
+                    )
+                }
+                
+                Spacer(Modifier.width(12.dp))
+                
+                Column(Modifier.weight(1f)) {
+                    BasicText(
+                        text = "You're Trending Today!",
+                        style = TextStyle(
+                            color = contentColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (rank != null) {
+                            BasicText(
+                                text = "#$rank",
+                                style = TextStyle(
+                                    color = Color(0xFFFF6B6B),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            BasicText(
+                                text = " • ",
+                                style = TextStyle(
+                                    color = contentColor.copy(alpha = 0.5f),
+                                    fontSize = 14.sp
+                                )
+                            )
+                        }
+                        BasicText(
+                            text = "$viewsToday profile views today",
+                            style = TextStyle(
+                                color = contentColor.copy(alpha = 0.7f),
+                                fontSize = 13.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== Stacked Reward Cards Overlay ====================
+
+data class RewardCard(
+    val id: String,
+    val type: RewardCardType,
+    val user: Any?, // DailyMatchUser or HiddenGemUser
+    val message: String = ""
+)
+
+enum class RewardCardType {
+    DAILY_MATCH,
+    HIDDEN_GEM
+}
+
+@Composable
+fun SwipeableRewardCardsOverlay(
+    dailyMatches: List<DailyMatchUser>,
+    hiddenGem: HiddenGemUser?,
+    hiddenGemMessage: String,
+    backdrop: LayerBackdrop,
+    contentColor: Color,
+    accentColor: Color,
+    onMatchClick: (String) -> Unit,
+    onHiddenGemConnect: () -> Unit,
+    onDismissAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Build list of cards: Hidden gem at bottom (rendered first), daily matches on top
+    val cards = remember(dailyMatches, hiddenGem) {
+        val list = mutableListOf<RewardCard>()
+        
+        // Hidden gem goes first (will be at bottom of stack visually)
+        if (hiddenGem != null) {
+            list.add(RewardCard(
+                id = "hidden_gem",
+                type = RewardCardType.HIDDEN_GEM,
+                user = hiddenGem,
+                message = hiddenGemMessage
+            ))
+        }
+        
+        // Add up to 3 daily match cards (first match will be on top)
+        dailyMatches.take(3).forEachIndexed { index, match ->
+            list.add(RewardCard(
+                id = "match_$index",
+                type = RewardCardType.DAILY_MATCH,
+                user = match,
+                message = when (index) {
+                    0 -> "Perfect match for you!"
+                    1 -> "Similar interests detected"
+                    else -> "High reply rate!"
+                }
+            ))
+        }
+        
+        list
+    }
+    
+    // Track which cards are still visible (indices: 0 = bottom, last = top)
+    // We use the indices in order, so the LAST card is on top
+    var cardStack by remember { mutableStateOf(cards.indices.toList()) }
+    var showOverlay by remember { mutableStateOf(cards.isNotEmpty()) }
+    
+    // Auto-dismiss overlay when all cards are swiped
+    LaunchedEffect(cardStack) {
+        if (cardStack.isEmpty() && cards.isNotEmpty()) {
+            delay(300)
+            showOverlay = false
+            onDismissAll()
+        }
+    }
+    
+    AnimatedVisibility(
+        visible = showOverlay && cards.isNotEmpty(),
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable(enabled = false) { },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(24.dp)
+            ) {
+                // Header
+                BasicText(
+                    text = "✨ Today's Rewards",
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                
+                Spacer(Modifier.height(4.dp))
+                
+                BasicText(
+                    text = "Tap to view profile • Swipe up to dismiss",
+                    style = TextStyle(
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 13.sp
+                    )
+                )
+                
+                Spacer(Modifier.height(24.dp))
+                
+                // Stacked cards
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    // Render cards from bottom to top
+                    cardStack.forEachIndexed { stackIndex, cardIndex ->
+                        if (cardIndex < cards.size) {
+                            val card = cards[cardIndex]
+                            val isTopCard = stackIndex == cardStack.size - 1
+                            val distanceFromTop = cardStack.size - 1 - stackIndex
+                            
+                            StackedCard(
+                                card = card,
+                                stackPosition = distanceFromTop,
+                                isTopCard = isTopCard,
+                                totalCards = cardStack.size,
+                                backdrop = backdrop,
+                                contentColor = contentColor,
+                                accentColor = accentColor,
+                                onSwipeAway = {
+                                    cardStack = cardStack - cardIndex
+                                },
+                                onClick = {
+                                    when (card.type) {
+                                        RewardCardType.DAILY_MATCH -> {
+                                            (card.user as? DailyMatchUser)?.id?.let { 
+                                                onMatchClick(it)
+                                            }
+                                        }
+                                        RewardCardType.HIDDEN_GEM -> {
+                                            (card.user as? HiddenGemUser)?.id?.let {
+                                                onMatchClick(it)
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.zIndex((cardStack.size - distanceFromTop).toFloat())
+                            )
+                        }
+                    }
+                }
+                
+                // Card counter
+                BasicText(
+                    text = "${cardStack.size} cards remaining",
+                    style = TextStyle(
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 12.sp
+                    )
+                )
+                
+                Spacer(Modifier.height(20.dp))
+                
+                // Skip all button
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .clickable { 
+                            cardStack = emptyList()
+                        }
+                        .padding(horizontal = 32.dp, vertical = 14.dp)
+                ) {
+                    BasicText(
+                        text = "Skip All",
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StackedCard(
+    card: RewardCard,
+    stackPosition: Int, // 0 = top, 1 = second, etc.
+    isTopCard: Boolean,
+    totalCards: Int,
+    backdrop: LayerBackdrop,
+    contentColor: Color,
+    accentColor: Color,
+    onSwipeAway: () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var offsetY by remember { mutableStateOf(0f) }
+    var isDismissing by remember { mutableStateOf(false) }
+    val dismissThreshold = 120f
+    
+    // Animate offset
+    val animatedOffsetY by animateFloatAsState(
+        targetValue = if (isDismissing) -800f else offsetY,
+        animationSpec = if (isDismissing) {
+            tween(300, easing = FastOutSlowInEasing)
+        } else {
+            spring(stiffness = Spring.StiffnessMedium)
+        },
+        finishedListener = {
+            if (isDismissing) {
+                onSwipeAway()
+            }
+        },
+        label = "offsetY"
+    )
+    
+    // Stack visual effects
+    val stackScale = 1f - (stackPosition * 0.05f)
+    val stackOffset = stackPosition * 12f // Vertical offset for stacking
+    val stackAlpha = 1f - (stackPosition * 0.15f)
+    
+    // Check if should dismiss
+    LaunchedEffect(offsetY) {
+        if (offsetY < -dismissThreshold && isTopCard && !isDismissing) {
+            isDismissing = true
+        }
+    }
+    
+    val isGold = card.type == RewardCardType.HIDDEN_GEM
+    
+    // Gold shimmer animation
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -300f,
+        targetValue = 300f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
+    )
+    
+    Box(
+        modifier
+            .fillMaxWidth()
+            .offset { IntOffset(0, (stackOffset + animatedOffsetY).roundToInt()) }
+            .graphicsLayer {
+                scaleX = stackScale
+                scaleY = stackScale
+                alpha = if (isDismissing) {
+                    (1f - (animatedOffsetY.absoluteValue / 400f)).coerceAtLeast(0f)
+                } else {
+                    stackAlpha
+                }
+                // Slight rotation when swiping
+                rotationX = if (isTopCard) animatedOffsetY / 30f else 0f
+            }
+            .then(
+                if (isTopCard) {
+                    Modifier.draggable(
+                        orientation = Orientation.Vertical,
+                        state = rememberDraggableState { delta ->
+                            // Only allow swiping up
+                            if (offsetY + delta < 0 || offsetY < 0) {
+                                offsetY += delta
+                            }
+                        },
+                        onDragStopped = {
+                            if (offsetY > -dismissThreshold) {
+                                offsetY = 0f // Spring back
+                            }
+                        }
+                    )
+                } else Modifier
+            )
+            .clip(RoundedCornerShape(24.dp))
+            .then(
+                if (isGold) {
+                    Modifier
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFFFFD700).copy(alpha = 0.4f),
+                                    Color(0xFFFFA500).copy(alpha = 0.35f),
+                                    Color(0xFFFFD700).copy(alpha = 0.3f)
+                                ),
+                                start = Offset(shimmerOffset, 0f),
+                                end = Offset(shimmerOffset + 400f, 300f)
+                            )
+                        )
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedRectangle(24f.dp) },
+                            effects = {
+                                vibrancy()
+                                blur(24f.dp.toPx())
+                            }
+                        )
+                } else {
+                    Modifier
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedRectangle(24f.dp) },
+                            effects = {
+                                vibrancy()
+                                blur(20f.dp.toPx())
+                            }
+                        )
+                        .background(Color.White.copy(alpha = 0.12f))
+                }
+            )
+            .clickable(enabled = isTopCard) { onClick() }
+            .padding(16.dp)
+    ) {
+        when (card.type) {
+            RewardCardType.DAILY_MATCH -> DailyMatchStackedContent(
+                user = card.user as DailyMatchUser,
+                message = card.message,
+                contentColor = contentColor,
+                accentColor = accentColor,
+                isTopCard = isTopCard
+            )
+            RewardCardType.HIDDEN_GEM -> HiddenGemStackedContent(
+                user = card.user as HiddenGemUser,
+                message = card.message,
+                contentColor = contentColor,
+                accentColor = accentColor,
+                isTopCard = isTopCard
+            )
+        }
+        
+        // Swipe hint on top card
+        if (isTopCard && offsetY == 0f) {
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-8).dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(contentColor.copy(alpha = 0.3f))
+            )
+        }
+    }
+}
+
+@Composable
+private fun DailyMatchStackedContent(
+    user: DailyMatchUser,
+    message: String,
+    contentColor: Color,
+    accentColor: Color,
+    isTopCard: Boolean
+) {
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Avatar with online indicator
+            Box(
+                Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (user.isOnline) 
+                            Brush.linearGradient(listOf(Color(0xFF4CAF50), Color(0xFF2E7D32)))
+                        else 
+                            Brush.linearGradient(listOf(accentColor.copy(alpha = 0.4f), accentColor.copy(alpha = 0.2f)))
+                    )
+                    .padding(3.dp)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(user.profileImage ?: "")
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = user.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            Spacer(Modifier.width(14.dp))
+            
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BasicText(
+                        text = "🎯",
+                        style = TextStyle(fontSize = 16.sp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    BasicText(
+                        text = user.name ?: "Match",
+                        style = TextStyle(
+                            color = contentColor,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (user.isOnline) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF4CAF50))
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        BasicText(
+                            text = "Online",
+                            style = TextStyle(
+                                color = Color(0xFF4CAF50),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        )
+                    }
+                }
+                
+                if (user.headline != null) {
+                    Spacer(Modifier.height(4.dp))
+                    BasicText(
+                        text = user.headline,
+                        style = TextStyle(
+                            color = contentColor.copy(alpha = 0.7f),
+                            fontSize = 13.sp
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+        
+        Spacer(Modifier.height(14.dp))
+        
+        // Bottom row with message and reply rate
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Match message
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(accentColor.copy(alpha = 0.15f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                BasicText(
+                    text = message,
+                    style = TextStyle(
+                        color = accentColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                )
+            }
+            
+            // Reply rate
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BasicText(
+                    text = "⚡",
+                    style = TextStyle(fontSize = 14.sp)
+                )
+                Spacer(Modifier.width(4.dp))
+                BasicText(
+                    text = "${user.replyRate}%",
+                    style = TextStyle(
+                        color = Color(0xFF4CAF50),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                BasicText(
+                    text = " reply",
+                    style = TextStyle(
+                        color = contentColor.copy(alpha = 0.5f),
+                        fontSize = 12.sp
+                    )
+                )
+            }
+        }
+        
+        // Tap hint for top card
+        if (isTopCard) {
+            Spacer(Modifier.height(12.dp))
+            BasicText(
+                text = "Tap to view profile →",
+                style = TextStyle(
+                    color = contentColor.copy(alpha = 0.5f),
+                    fontSize = 11.sp
+                ),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+
+@Composable
+private fun HiddenGemStackedContent(
+    user: HiddenGemUser,
+    message: String,
+    contentColor: Color,
+    accentColor: Color,
+    isTopCard: Boolean
+) {
+    Column {
+        // Premium badge
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFFFFD700), Color(0xFFFFA500))
+                        )
+                    )
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BasicText(
+                        text = "💎",
+                        style = TextStyle(fontSize = 14.sp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    BasicText(
+                        text = "WEEKLY GEM",
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+            }
+            
+            BasicText(
+                text = "✨ Premium Match",
+                style = TextStyle(
+                    color = Color(0xFFFFD700),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
+        
+        Spacer(Modifier.height(16.dp))
+        
+        // User info
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Gold bordered avatar
+            Box(
+                Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFFFFD700), Color(0xFFFFA500), Color(0xFFFFD700))
+                        )
+                    )
+                    .padding(3.dp)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(user.profileImage ?: "")
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = user.name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            Spacer(Modifier.width(14.dp))
+            
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BasicText(
+                        text = user.name ?: "Hidden Gem",
+                        style = TextStyle(
+                            color = contentColor,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    if (user.isOnline) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF4CAF50))
+                        )
+                    }
+                }
+                
+                if (user.headline != null) {
+                    Spacer(Modifier.height(4.dp))
+                    BasicText(
+                        text = user.headline,
+                        style = TextStyle(
+                            color = contentColor.copy(alpha = 0.7f),
+                            fontSize = 13.sp
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                
+                // Gold reply rate
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BasicText(
+                        text = "⚡",
+                        style = TextStyle(fontSize = 14.sp)
+                    )
+                    BasicText(
+                        text = " ${user.replyRate}% reply rate",
+                        style = TextStyle(
+                            color = Color(0xFFFFD700),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+            }
+        }
+        
+        Spacer(Modifier.height(14.dp))
+        
+        // Message
+        BasicText(
+            text = message.ifEmpty { "A highly connected professional just for you!" },
+            style = TextStyle(
+                color = contentColor.copy(alpha = 0.6f),
+                fontSize = 12.sp
+            )
+        )
+        
+        // Tap hint for top card
+        if (isTopCard) {
+            Spacer(Modifier.height(10.dp))
+            BasicText(
+                text = "Tap to view profile →",
+                style = TextStyle(
+                    color = Color(0xFFFFD700).copy(alpha = 0.7f),
+                    fontSize = 11.sp
+                ),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+
+
